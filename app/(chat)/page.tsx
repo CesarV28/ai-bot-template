@@ -5,6 +5,7 @@ import { auth } from '@/auth'
 import { Session } from '@/lib/types'
 import { getMissingKeys } from '@/actions/chat.actions'
 
+
 export const metadata = {
   title: 'AI Chatbot'
 }

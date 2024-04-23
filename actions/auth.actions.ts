@@ -4,34 +4,44 @@ import { signIn } from '@/auth'
 import { User } from '@/lib/types'
 import { AuthError } from 'next-auth'
 import { z } from 'zod'
-import { kv } from '@vercel/kv'
 import { ResultCode, getStringFromBuffer } from '@/lib/utils'
+import { createNewUser, getUserByEmail } from './user.actions'
 
 export async function createUser(
     email: string,
     hashedPassword: string,
     salt: string
 ) {
-    const existingUser = await getUser(email)
+    try {
+        const existingUser = await getUserByEmail(email)
 
-    if (existingUser) {
+        if (existingUser) {
+            return {
+                type: 'error',
+                resultCode: ResultCode.UserAlreadyExists
+            }
+        } else {
+            const user = {
+                id: crypto.randomUUID(),
+                email,
+                password: hashedPassword,
+                salt
+            }
+
+            console.log(user)
+
+            await createNewUser(user);
+
+            return {
+                type: 'success',
+                resultCode: ResultCode.UserCreated
+            }
+        }
+    } catch (error) {
+        console.log(error);
         return {
             type: 'error',
-            resultCode: ResultCode.UserAlreadyExists
-        }
-    } else {
-        const user = {
-            id: crypto.randomUUID(),
-            email,
-            password: hashedPassword,
-            salt
-        }
-
-        await kv.hmset(`user:${email}`, user)
-
-        return {
-            type: 'success',
-            resultCode: ResultCode.UserCreated
+            resultCode: ResultCode.UnknownError
         }
     }
 }
@@ -111,10 +121,7 @@ export async function signup(
 }
 
 
-export async function getUser(email: string) {
-    const user = await kv.hgetall<User>(`user:${email}`)
-    return user
-}
+
 
 interface Result {
     type: string
